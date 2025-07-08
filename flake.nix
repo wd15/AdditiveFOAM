@@ -24,7 +24,7 @@
     derivations = with config; rec {
       callPackage = lib.callPackage {};
 
-      openfoam = callPackage ./openfoam.nix {};
+      openfoam = callPackage ./openfoam.nix { version_ = "10"; };
 
     };
 

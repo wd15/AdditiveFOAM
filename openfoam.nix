@@ -15,15 +15,21 @@
   lib,
   trilinos-mpi,
   nix-update-script,
+  version_ ? "12"
 }:
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   pname = "openfoam-org";
-  version = "10";
+  version = version_;
+  hash = if version == "12" then
+    "sha256-++WRLffDiFeYo5Fv3zBjgmV+PqwYTTtuvqjx4iKF5RI="
+         else
+           "sha256-1vcBZELsThlfSJeW3iFm8sTh+uOgKKEYU0g+XlxczdA=";
   src = fetchFromGitHub {
     owner = "OpenFOAM";
     repo = "OpenFOAM-12";
-    rev = "refs/tags/version-10";
-    hash = "sha256-1vcBZELsThlfSJeW3iFm8sTh+uOgKKEYU0g+XlxczdA="; #sha256-++WRLffDiFeYo5Fv3zBjgmV+PqwYTTtuvqjx4iKF555=";
+    rev = "refs/tags/version-${version}";
+    hash = hash; #"sha256-1vcBZELsThlfSJeW3iFm8sTh+uOgKKEYU0g+XlxczdA="; #sha256-++WRLffDiFeYo5Fv3zBjgmV+PqwYTTtuvqjx4iKF555=";
+
   };
   meta = with lib; {
     description = "Open source computational fluid dynamics toolkit";
@@ -60,6 +66,7 @@ stdenv.mkDerivation {
     mkdir -p builduser/OpenFOAM/OpenFOAM-12/paraviewout
 
     echo "hello1"
+    ls $HOME/OpenFOAM/OpenFOAM-12/wmake
 
     set +e
     for f in \
@@ -67,6 +74,7 @@ stdenv.mkDerivation {
         $HOME/OpenFOAM/OpenFOAM-12/wmake/*
     do
       substituteInPlace $f --replace-quiet /bin/bash ${bash}/bin/bash
+      #substituteInPlace $f --replace-fail /bin/bash ${bash}/bin/bash
     done
     set -e
 
