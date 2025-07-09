@@ -9,13 +9,15 @@
   mpi,
   scotch,
   boost,
+  openmpi,
   cgal,
   zlib,
   fetchFromGitHub,
   lib,
   trilinos-mpi,
+  mpich,
   nix-update-script,
-  version_ ? "12"
+  version_ ? "12",
 }:
 stdenv.mkDerivation rec {
   pname = "openfoam-org";
@@ -45,6 +47,14 @@ stdenv.mkDerivation rec {
     m4
     flex
     bison
+    openmpi
+    trilinos-mpi
+    mpi
+    openmpi.dev
+    flex
+    scotch
+    scotch.dev
+#    mpich
   ];
   buildInputs = [
     fftw
@@ -54,6 +64,13 @@ stdenv.mkDerivation rec {
     cgal
     zlib
     trilinos-mpi
+    openmpi
+    openmpi.dev
+    mpi
+    flex
+    scotch
+    scotch.dev
+#    mpich
   ];
   sourceRoot = ".";
   patchPhase = ''
@@ -65,29 +82,22 @@ stdenv.mkDerivation rec {
     mv source builduser/OpenFOAM/OpenFOAM-12
     mkdir -p builduser/OpenFOAM/OpenFOAM-12/paraviewout
 
-    echo "hello1"
-    ls $HOME/OpenFOAM/OpenFOAM-12/wmake
-
     set +e
     for f in \
         $HOME/OpenFOAM/OpenFOAM-12/wmake/scripts/* \
         $HOME/OpenFOAM/OpenFOAM-12/wmake/*
     do
       substituteInPlace $f --replace-quiet /bin/bash ${bash}/bin/bash
-      #substituteInPlace $f --replace-fail /bin/bash ${bash}/bin/bash
     done
     set -e
 
-    echo "hello2"
     rm $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/bash_completion
     touch $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/bash_completion
 
-    echo "hello3"
     echo "set +e" | cat $HOME/OpenFOAM/OpenFOAM-12/etc/bashrc > tmp
     rm $HOME/OpenFOAM/OpenFOAM-12/etc/bashrc
     mv tmp $HOME/OpenFOAM/OpenFOAM-12/etc/bashrc
 
-    echo "hello4"
     echo "set +e" | cat $HOME/OpenFOAM/OpenFOAM-12/Allwmake > tmp
     rm $HOME/OpenFOAM/OpenFOAM-12/Allwmake
     mv tmp $HOME/OpenFOAM/OpenFOAM-12/Allwmake
@@ -97,21 +107,41 @@ stdenv.mkDerivation rec {
     chmod +x $HOME/OpenFOAM/OpenFOAM-12/applications/utilities/postProcessing/graphics/PVReaders/Allwmake
     touch $HOME/.OpenFOAM/prefs.sh
 
+    # only if version 10
+    substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/etc/bashrc --replace-fail "export WM_PROJECT_VERSION=dev" "export WM_PROJECT_VERSION=12"
+    sed -i '47 i libDir=${openmpi.dev}/lib' $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/mpi
+    substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch --replace-fail "export SCOTCH_VERSION=scotch_6.0.9" "export SCOTCH_VERSION=scotch_7.0.7"
+    sed -ie 's|SCOTCH_ARCH_PATH=.*$|SCOTCH_ARCH_PATH=${scotch.dev}|' $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch
+
+    cat $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch
+
     runHook postPatch
   '';
   configurePhase = ''
     runHook preConfigure
 
     echo "export ZOLTAN_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
-    echo "export SCOTCH_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
+    #echo "export SCOTCH_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
 
     runHook postConfigure
   '';
+
+  
   buildPhase = ''
     runHook preBuild
 
     cd $HOME/OpenFOAM/OpenFOAM-12
     source ./etc/bashrc
+
+    # only if version 10
+    echo "${scotch.dev}"
+
+    export LD_LIBRARY_PATH="${openmpi.dev}/lib:${openmpi}/lib:${flex}/lib:${scotch.dev}/lib''${LD_LIBRARY_PATH}"
+    export C_INCLUDE_PATH="${openmpi.dev}/include:${flex}/include:${scotch.dev}/include"
+    export CPLUS_INCLUDE_PATH="${openmpi.dev}/include:${flex}/include:${scotch.dev}/include"
+    export PATH="${openmpi.dev}/bin:${scotch}/bin''${PATH}"
+
+
     ./Allwmake -j $NIX_BUILD_CORES -q
 
     runHook postBuild
