@@ -113,7 +113,18 @@ stdenv.mkDerivation rec {
     substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch --replace-fail "export SCOTCH_VERSION=scotch_6.0.9" "export SCOTCH_VERSION=scotch_7.0.7"
     sed -ie 's|SCOTCH_ARCH_PATH=.*$|SCOTCH_ARCH_PATH=${scotch.dev}|' $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch
 
-    cat $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch
+    # set +e
+    # for f in \
+    #     $HOME/OpenFOAM/OpenFOAM-12/src/parallel/decompose/*/Make/options
+    # do
+    #   substituteInPlace $f --replace-quiet /usr/include/scotch ${scotch.dev}/include
+    #   sed -i '/-lscotch/d' $f
+    #   sed -i '/-lscotcherrexit/d' $f
+    #   sed -i '/-lptscotch/d' $f
+    #   sed -i '/-lptscotcherrexit/d' $f
+
+    # done
+    # set -e
 
     runHook postPatch
   '';
@@ -121,7 +132,7 @@ stdenv.mkDerivation rec {
     runHook preConfigure
 
     echo "export ZOLTAN_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
-    #echo "export SCOTCH_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
+    echo "export SCOTCH_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
 
     runHook postConfigure
   '';
@@ -140,7 +151,6 @@ stdenv.mkDerivation rec {
     export C_INCLUDE_PATH="${openmpi.dev}/include:${flex}/include:${scotch.dev}/include"
     export CPLUS_INCLUDE_PATH="${openmpi.dev}/include:${flex}/include:${scotch.dev}/include"
     export PATH="${openmpi.dev}/bin:${scotch}/bin''${PATH}"
-
 
     ./Allwmake -j $NIX_BUILD_CORES -q
 
