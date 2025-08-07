@@ -18,6 +18,7 @@
   mpich,
   nix-update-script,
   version_ ? "12",
+  glibc
 }:
 stdenv.mkDerivation rec {
   pname = "openfoam-org";
@@ -51,9 +52,11 @@ stdenv.mkDerivation rec {
     trilinos-mpi
     mpi
     openmpi.dev
+    openmpi.out
     flex
     scotch
     scotch.dev
+    glibc
 #    mpich
   ];
   buildInputs = [
@@ -66,10 +69,12 @@ stdenv.mkDerivation rec {
     trilinos-mpi
     openmpi
     openmpi.dev
+    openmpi.out
     mpi
     flex
     scotch
     scotch.dev
+    glibc
 #    mpich
   ];
   sourceRoot = ".";
@@ -113,18 +118,19 @@ stdenv.mkDerivation rec {
     substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch --replace-fail "export SCOTCH_VERSION=scotch_6.0.9" "export SCOTCH_VERSION=scotch_7.0.7"
     sed -ie 's|SCOTCH_ARCH_PATH=.*$|SCOTCH_ARCH_PATH=${scotch.dev}|' $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch
 
-    # set +e
-    # for f in \
-    #     $HOME/OpenFOAM/OpenFOAM-12/src/parallel/decompose/*/Make/options
-    # do
-    #   substituteInPlace $f --replace-quiet /usr/include/scotch ${scotch.dev}/include
-    #   sed -i '/-lscotch/d' $f
-    #   sed -i '/-lscotcherrexit/d' $f
-    #   sed -i '/-lptscotch/d' $f
-    #   sed -i '/-lptscotcherrexit/d' $f
+    set +e
+    for f in \
+        $HOME/OpenFOAM/OpenFOAM-12/src/parallel/decompose/*/Make/options
+    do
+      substituteInPlace $f --replace-quiet /usr/include/scotch ${scotch.dev}/include
+      sed -i '/-lscotch/ a -L${scotch}/lib \\' $f
+      sed -i '/-lscotch/ a -L${scotch.dev}/lib \\' $f
+      sed -i '/-lscotch/ a -L${scotch.out}/lib \\' $f
+    done
+    set -e
 
-    # done
-    # set -e
+    substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/wmake/rules/General/mplibOPENMPI --replace-fail "\$(MPI_ARCH_PATH)/include" "${openmpi.dev}/include"
+    substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/wmake/rules/General/mplibOPENMPI --replace-fail "\$(MPI_ARCH_PATH)/lib" "${openmpi.out}/lib"
 
     runHook postPatch
   '';
@@ -147,9 +153,9 @@ stdenv.mkDerivation rec {
     # only if version 10
     echo "${scotch.dev}"
 
-    export LD_LIBRARY_PATH="${openmpi.dev}/lib:${openmpi}/lib:${flex}/lib:${scotch.dev}/lib''${LD_LIBRARY_PATH}"
-    export C_INCLUDE_PATH="${openmpi.dev}/include:${flex}/include:${scotch.dev}/include"
-    export CPLUS_INCLUDE_PATH="${openmpi.dev}/include:${flex}/include:${scotch.dev}/include"
+    export LD_LIBRARY_PATH="${openmpi.dev}/lib:${openmpi}/lib:${openmpi.out}/lib:${flex}/lib:${scotch.dev}/lib''${LD_LIBRARY_PATH}"
+    export C_INCLUDE_PATH="${openmpi.dev}/include:${openmpi.out}/include:${flex}/include:${scotch.dev}/include''${C_INCLUDE_PATH}"
+    export CPLUS_INCLUDE_PATH="${openmpi.dev}/include:${openmpi.out}/include:${flex}/include:${scotch.dev}/include''${CPLUS_INCLUDE_PATH}"
     export PATH="${openmpi.dev}/bin:${scotch}/bin''${PATH}"
 
     ./Allwmake -j $NIX_BUILD_CORES -q
