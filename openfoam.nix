@@ -1,3 +1,16 @@
+# Based on this build for OpenFOAM 12
+#   - https://github.com/NixOS/nixpkgs/blob/07ba4b68bad1931618851055077ed20d677b81ed/pkgs/by-name/op/openfoam-org/package.nix
+# Useful as well
+#   - https://git.computecanada.ca/nix/ccpkgs/-/blob/cc-20.09/pkgs/openfoam.nix
+# TODO:
+#   - use OpenFOAM-10 maybe
+#   - fix buildInputs versus nativeBuildInputs
+#   - remove .dev in inputs
+#   - remove argumnets that aren't required
+#   - stop setting LD LIBRARY and the like
+#   - remove configure phase as it isn't doing anything
+
+
 {
   stdenv,
   bash,
@@ -16,22 +29,17 @@
   trilinos-mpi,
   mpich,
   nix-update-script,
-  version_ ? "12",
   glibc,
   libbsd,
 }:
 stdenv.mkDerivation rec {
   pname = "openfoam-org";
-  version = version_;
-  hash = if version == "12" then
-    "sha256-++WRLffDiFeYo5Fv3zBjgmV+PqwYTTtuvqjx4iKF5RI="
-         else
-           "sha256-1vcBZELsThlfSJeW3iFm8sTh+uOgKKEYU0g+XlxczdA=";
+  version = "10";
   src = fetchFromGitHub {
     owner = "OpenFOAM";
     repo = "OpenFOAM-12";
     rev = "refs/tags/version-${version}";
-    hash = hash; #"sha256-1vcBZELsThlfSJeW3iFm8sTh+uOgKKEYU0g+XlxczdA="; #sha256-++WRLffDiFeYo5Fv3zBjgmV+PqwYTTtuvqjx4iKF555=";
+    hash = "sha256-1vcBZELsThlfSJeW3iFm8sTh+uOgKKEYU0g+XlxczdA=";
 
   };
   meta = with lib; {
@@ -45,7 +53,6 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = buildInputs;
 
   buildInputs = [
-    # gcc10
     gnumake
     bash
     m4
@@ -57,22 +64,20 @@ stdenv.mkDerivation rec {
     trilinos-mpi
     openmpi
     openmpi.dev
-    # openmpi.dev
-    # openmpi.out
-#    mpi
     flex
     scotch
     scotch.dev
     glibc
     libbsd
-#    mpich
   ];
 
   propagatedBuildInputs = [
     openmpi
     openmpi.dev
   ];
+
   sourceRoot = ".";
+
   patchPhase = ''
     runHook prePatch
 
@@ -110,7 +115,6 @@ stdenv.mkDerivation rec {
     # only if version 10
     substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/etc/bashrc --replace-fail "export WM_PROJECT_VERSION=dev" "export WM_PROJECT_VERSION=12"
     sed -i '47 i libDir=${openmpi.dev}/lib' $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/mpi
-     # substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch --replace-fail "export SCOTCH_VERSION=scotch_6.0.9" "export SCOTCH_VERSION=scotch_6.1.3."
     sed -ie 's|SCOTCH_ARCH_PATH=.*$|SCOTCH_ARCH_PATH=${scotch.dev}|' $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch
 
     set +e
@@ -119,16 +123,13 @@ stdenv.mkDerivation rec {
     do
       substituteInPlace $f --replace-quiet /usr/include/scotch ${scotch.dev}/include
       substituteInPlace $f --replace-quiet "\$(SCOTCH_ARCH_PATH)/lib" ${scotch.out}/lib
-      # sed -i '/-lscotch/ a -L${scotch}/lib \\' $f
-      # sed -i '/-lscotch/ a -L${scotch.dev}/lib \\' $f
-      # sed -i '/-lscotch/ a -L${scotch.out}/lib \\' $f
     done
     set -e
 
     substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/wmake/rules/General/mplibOPENMPI --replace-fail "\$(MPI_ARCH_PATH)/include" "${openmpi.dev}/include"
     substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/wmake/rules/General/mplibOPENMPI --replace-fail "\$(MPI_ARCH_PATH)/lib" "${openmpi.out}/lib"
 
-    ls $HOME/OpenFOAM/OpenFOAM-12/tutorials/mesh/snappyHexMesh/iglooWithFridges
+    # This has a broken link
     rm $HOME/OpenFOAM/OpenFOAM-12/tutorials/mesh/snappyHexMesh/iglooWithFridges
 
     runHook postPatch
@@ -154,23 +155,9 @@ stdenv.mkDerivation rec {
     cd $HOME/OpenFOAM/OpenFOAM-12
     source ./etc/bashrc
 
-    # only if version 10
-#    echo "${scotch.dev}"
-
-    # export LD_LIBRARY_PATH="${openmpi.dev}/lib:${openmpi}/lib:${openmpi.out}/lib:${flex}/lib:${scotch.dev}/lib:${libbsd}/lib''${LD_LIBRARY_PATH}"
-    # export C_INCLUDE_PATH="${openmpi.dev}/include:${openmpi.out}/include:${flex}/include:${scotch.dev}/include''${C_INCLUDE_PATH}"
-    # export CPLUS_INCLUDE_PATH="${openmpi.dev}/include:${openmpi.out}/include:${flex}/include:${scotch.dev}/include''${CPLUS_INCLUDE_PATH}"
-    # export PATH="${openmpi.dev}/bin:${scotch}/bin''${PATH}"
-
-    # export LD_LIBRARY_PATH="${flex}/lib:${scotch.dev}/lib:${libbsd}/lib''${LD_LIBRARY_PATH}"
-    # export C_INCLUDE_PATH="${flex}/include:${scotch.dev}/include''${C_INCLUDE_PATH}"
-    # export CPLUS_INCLUDE_PATH="${flex}/include:${scotch.dev}/include''${CPLUS_INCLUDE_PATH}"
-    # export PATH="${scotch}/bin''${PATH}"
-
     export LD_LIBRARY_PATH="${flex}/lib:${libbsd}/lib''${LD_LIBRARY_PATH}"
     export C_INCLUDE_PATH="${flex}/include''${C_INCLUDE_PATH}"
     export CPLUS_INCLUDE_PATH="${flex}/include''${CPLUS_INCLUDE_PATH}"
-
 
     ./Allwmake -j $NIX_BUILD_CORES -q
 
@@ -189,6 +176,7 @@ stdenv.mkDerivation rec {
     cp -r src $out/opt/OpenFOAM-12
     cp -r doc $out/opt/OpenFOAM-12
     cp -r tutorials $out/opt/OpenFOAM-12
+    cp -r wmake $out/opt/OpenFOAM-12
 
     runHook postInstall
   '';

@@ -25,7 +25,7 @@
     derivations = with config; rec {
       callPackage = lib.callPackage {};
 
-      openfoam = callPackage ./openfoam.nix { version_ = "10"; scotch = scotch; };
+      openfoam = callPackage ./openfoam.nix { scotch = scotch; };
       scotch = callPackage ./scotch.nix { };      
 
     };
@@ -65,28 +65,21 @@
       default = additivefoamDev;
 
       additivefoamDev = pkgs.mkShell rec {
-        name = "addativefoam-dev";
+        name = "additivefoam-dev";
 
         packages = with pkgs; [
-          git
-          clang-tools
-          ninja
-        ] ++ pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isLinux) [
-          gdb
-          cntr
+          derivations.openfoam
+          cmake
         ] ++ self.outputs.packages.${system}.default.buildInputs
           ++ self.outputs.packages.${system}.default.nativeBuildInputs
           ++ self.outputs.packages.${system}.default.propagatedBuildInputs;
-
-        # Ensure the locales point at the correct archive location.
-        LOCALE_ARCHIVE = pkgs.lib.optional (pkgs.stdenv.hostPlatform.isLinux) (
-          "${pkgs.glibcLocales}/lib/locale/locale-archive"
-        );
+        
+        shellHook = ''
+          source ${derivations.openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc
+        '';
       };
-      
 
     };
 
-  });
-
+});
 }
