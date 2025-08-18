@@ -6,7 +6,6 @@
   bison,
   fftw,
   gnumake,
-  mpi,
   scotch,
   boost,
   openmpi,
@@ -18,7 +17,8 @@
   mpich,
   nix-update-script,
   version_ ? "12",
-  glibc
+  glibc,
+  libbsd,
 }:
 stdenv.mkDerivation rec {
   pname = "openfoam-org";
@@ -42,40 +42,35 @@ stdenv.mkDerivation rec {
     platforms = with platforms; [ "x86_64-linux" ];
   };
   passthru.updateScript = nix-update-script { };
-  nativeBuildInputs = [
+  nativeBuildInputs = buildInputs;
+
+  buildInputs = [
+    # gcc10
     gnumake
     bash
     m4
-    flex
     bison
-    openmpi
-    trilinos-mpi
-    mpi
-    openmpi.dev
-    openmpi.out
-    flex
-    scotch
-    scotch.dev
-    glibc
-#    mpich
-  ];
-  buildInputs = [
     fftw
-    mpi.dev
-    scotch
     boost
     cgal
     zlib
     trilinos-mpi
     openmpi
     openmpi.dev
-    openmpi.out
-    mpi
+    # openmpi.dev
+    # openmpi.out
+#    mpi
     flex
     scotch
     scotch.dev
     glibc
+    libbsd
 #    mpich
+  ];
+
+  propagatedBuildInputs = [
+    openmpi
+    openmpi.dev
   ];
   sourceRoot = ".";
   patchPhase = ''
@@ -115,7 +110,7 @@ stdenv.mkDerivation rec {
     # only if version 10
     substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/etc/bashrc --replace-fail "export WM_PROJECT_VERSION=dev" "export WM_PROJECT_VERSION=12"
     sed -i '47 i libDir=${openmpi.dev}/lib' $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/mpi
-    substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch --replace-fail "export SCOTCH_VERSION=scotch_6.0.9" "export SCOTCH_VERSION=scotch_7.0.7"
+     # substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch --replace-fail "export SCOTCH_VERSION=scotch_6.0.9" "export SCOTCH_VERSION=scotch_6.1.3."
     sed -ie 's|SCOTCH_ARCH_PATH=.*$|SCOTCH_ARCH_PATH=${scotch.dev}|' $HOME/OpenFOAM/OpenFOAM-12/etc/config.sh/scotch
 
     set +e
@@ -123,27 +118,36 @@ stdenv.mkDerivation rec {
         $HOME/OpenFOAM/OpenFOAM-12/src/parallel/decompose/*/Make/options
     do
       substituteInPlace $f --replace-quiet /usr/include/scotch ${scotch.dev}/include
-      sed -i '/-lscotch/ a -L${scotch}/lib \\' $f
-      sed -i '/-lscotch/ a -L${scotch.dev}/lib \\' $f
-      sed -i '/-lscotch/ a -L${scotch.out}/lib \\' $f
+      substituteInPlace $f --replace-quiet "\$(SCOTCH_ARCH_PATH)/lib" ${scotch.out}/lib
+      # sed -i '/-lscotch/ a -L${scotch}/lib \\' $f
+      # sed -i '/-lscotch/ a -L${scotch.dev}/lib \\' $f
+      # sed -i '/-lscotch/ a -L${scotch.out}/lib \\' $f
     done
     set -e
 
     substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/wmake/rules/General/mplibOPENMPI --replace-fail "\$(MPI_ARCH_PATH)/include" "${openmpi.dev}/include"
     substituteInPlace $HOME/OpenFOAM/OpenFOAM-12/wmake/rules/General/mplibOPENMPI --replace-fail "\$(MPI_ARCH_PATH)/lib" "${openmpi.out}/lib"
 
+    ls $HOME/OpenFOAM/OpenFOAM-12/tutorials/mesh/snappyHexMesh/iglooWithFridges
+    rm $HOME/OpenFOAM/OpenFOAM-12/tutorials/mesh/snappyHexMesh/iglooWithFridges
+
     runHook postPatch
+
   '';
+
   configurePhase = ''
     runHook preConfigure
 
     echo "export ZOLTAN_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
     echo "export SCOTCH_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
 
+    # echo "export ZOLTAN_TYPE=none" >> $HOME/.OpenFOAM/prefs.sh
+    # echo "export SCOTCH_TYPE=none" >> $HOME/.OpenFOAM/prefs.sh
+
+
     runHook postConfigure
   '';
 
-  
   buildPhase = ''
     runHook preBuild
 
@@ -151,17 +155,28 @@ stdenv.mkDerivation rec {
     source ./etc/bashrc
 
     # only if version 10
-    echo "${scotch.dev}"
+#    echo "${scotch.dev}"
 
-    export LD_LIBRARY_PATH="${openmpi.dev}/lib:${openmpi}/lib:${openmpi.out}/lib:${flex}/lib:${scotch.dev}/lib''${LD_LIBRARY_PATH}"
-    export C_INCLUDE_PATH="${openmpi.dev}/include:${openmpi.out}/include:${flex}/include:${scotch.dev}/include''${C_INCLUDE_PATH}"
-    export CPLUS_INCLUDE_PATH="${openmpi.dev}/include:${openmpi.out}/include:${flex}/include:${scotch.dev}/include''${CPLUS_INCLUDE_PATH}"
-    export PATH="${openmpi.dev}/bin:${scotch}/bin''${PATH}"
+    # export LD_LIBRARY_PATH="${openmpi.dev}/lib:${openmpi}/lib:${openmpi.out}/lib:${flex}/lib:${scotch.dev}/lib:${libbsd}/lib''${LD_LIBRARY_PATH}"
+    # export C_INCLUDE_PATH="${openmpi.dev}/include:${openmpi.out}/include:${flex}/include:${scotch.dev}/include''${C_INCLUDE_PATH}"
+    # export CPLUS_INCLUDE_PATH="${openmpi.dev}/include:${openmpi.out}/include:${flex}/include:${scotch.dev}/include''${CPLUS_INCLUDE_PATH}"
+    # export PATH="${openmpi.dev}/bin:${scotch}/bin''${PATH}"
+
+    # export LD_LIBRARY_PATH="${flex}/lib:${scotch.dev}/lib:${libbsd}/lib''${LD_LIBRARY_PATH}"
+    # export C_INCLUDE_PATH="${flex}/include:${scotch.dev}/include''${C_INCLUDE_PATH}"
+    # export CPLUS_INCLUDE_PATH="${flex}/include:${scotch.dev}/include''${CPLUS_INCLUDE_PATH}"
+    # export PATH="${scotch}/bin''${PATH}"
+
+    export LD_LIBRARY_PATH="${flex}/lib:${libbsd}/lib''${LD_LIBRARY_PATH}"
+    export C_INCLUDE_PATH="${flex}/include''${C_INCLUDE_PATH}"
+    export CPLUS_INCLUDE_PATH="${flex}/include''${CPLUS_INCLUDE_PATH}"
+
 
     ./Allwmake -j $NIX_BUILD_CORES -q
 
     runHook postBuild
   '';
+
   installPhase = ''
     runHook preInstall
 

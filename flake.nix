@@ -4,9 +4,8 @@
   description = "An exascale-capable cellular automaton for nucleation and grain growth";
 
   inputs = {
-    # nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
     # nixpkgs.url = "github:nixos/nixpkgs?ref=25.05;
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";    
     utils.url   = "github:numtide/flake-utils";
   };
 
@@ -26,12 +25,13 @@
     derivations = with config; rec {
       callPackage = lib.callPackage {};
 
-      openfoam = callPackage ./openfoam.nix { version_ = "10"; };
+      openfoam = callPackage ./openfoam.nix { version_ = "10"; scotch = scotch; };
+      scotch = callPackage ./scotch.nix { };      
 
     };
 
-    exaca = with config; pkgs.stdenv.mkDerivation rec {
-      pname = "exaca";
+    additivefoam = with config; pkgs.stdenv.mkDerivation rec {
+      pname = "additivefoam";
       version = "dev";
 
       src = self;
@@ -40,15 +40,17 @@
       
       nativeBuildInputs = [
         pkgs.cmake
+        derivations.openfoam
       ];
 
       buildInputs = [
-        pkgs.kokkos
+        derivations.openfoam
         pkgs.openmpi
       ];
 
       propagatedBuildInputs = [
         pkgs.openmpi
+        derivations.openfoam
       ];
 
     };
@@ -57,6 +59,32 @@
       default = openfoam;
 
       inherit (derivations) openfoam;
+    };
+
+    devShells = with config; rec {
+      default = additivefoamDev;
+
+      additivefoamDev = pkgs.mkShell rec {
+        name = "addativefoam-dev";
+
+        packages = with pkgs; [
+          git
+          clang-tools
+          ninja
+        ] ++ pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isLinux) [
+          gdb
+          cntr
+        ] ++ self.outputs.packages.${system}.default.buildInputs
+          ++ self.outputs.packages.${system}.default.nativeBuildInputs
+          ++ self.outputs.packages.${system}.default.propagatedBuildInputs;
+
+        # Ensure the locales point at the correct archive location.
+        LOCALE_ARCHIVE = pkgs.lib.optional (pkgs.stdenv.hostPlatform.isLinux) (
+          "${pkgs.glibcLocales}/lib/locale/locale-archive"
+        );
+      };
+      
+
     };
 
   });
