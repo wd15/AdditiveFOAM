@@ -25,62 +25,13 @@
     derivations = with config; rec {
       callPackage = lib.callPackage {};
 
-      openfoam = callPackage ./openfoam.nix { scotch = scotch; };
-      scotch = callPackage ./scotch.nix { };      
-
-      additivefoam = with config; pkgs.stdenv.mkDerivation rec {
-        pname = "additivefoam";
-        version = "dev";
-
-        sourceRoot = ".";
+      openfoam = callPackage ./nix/openfoam.nix { scotch = scotch; };
+      scotch = callPackage ./nix/scotch.nix { };      
+      additivefoam = callPackage ./nix/additivefoam.nix {
+        openfoam = openfoam;
         src = self;
-
-        dontUseCmakeConfigure = true;
-
-        buildInputs = [
-          derivations.openfoam
-          pkgs.openmpi
-        ];
-        
-        propagatedBuildInputs = [
-          pkgs.openmpi
-          derivations.openfoam
-        ];
-
-
-        buildPhase = ''
-          runHook preBuild
-
-          mkdir -p builduser/.OpenFOAM
-          mkdir -p builduser/OpenFOAM
-          export HOME=$(pwd)/builduser
-          export USER=builduser
-
-          source ${derivations.openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc || true
-
-          cd source/applications/solvers/additiveFoam/movingHeatSource
-          wmake libso
-
-          cd ..
-          wmake
-
-          runHook postBuild
-        '';
-
-        installPhase = ''
-        runHook preInstall
-
-        mkdir -p $out
-
-        cp -r $FOAM_USER_APPBIN $out
-        cp -r $FOAM_USER_LIBBIN $out
-
-        runHook postInstall
-        '';
-
-      
+        version = self.shortRev or self.dirtyShortRev;
       };
-
     };
     
     packages = rec {
@@ -98,13 +49,7 @@
         packages = with pkgs; [
           derivations.openfoam
           derivations.additivefoam
-          cmake
-          clang-tools
-        ] ++ pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isLinux) [
-          gdb
-          cntr
-        ] ++ derivations.openfoam.nativeBuildInputs
-          ++ derivations.openfoam.propagatedBuildInputs;
+        ];
 
         shellHook = ''
           source ${derivations.openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc
