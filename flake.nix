@@ -60,8 +60,7 @@
           export FOAM_USER_LIBBIN=${additivefoam.outPath}/lib
         '';
       };
-
     };
-
-});
+    
+  });
 }

@@ -39,7 +39,6 @@ stdenv.mkDerivation rec {
     platforms = with platforms; [ "x86_64-linux" ];
   };
   passthru.updateScript = nix-update-script { };
-  nativeBuildInputs = buildInputs;
 
   buildInputs = [
     gnumake
@@ -52,15 +51,12 @@ stdenv.mkDerivation rec {
     zlib
     trilinos-mpi
     openmpi
-    openmpi.dev
     flex
     scotch
-    scotch.dev
   ];
 
   propagatedBuildInputs = [
     openmpi
-    openmpi.dev
   ];
 
   sourceRoot = ".";
@@ -121,19 +117,6 @@ stdenv.mkDerivation rec {
 
     runHook postPatch
 
-  '';
-
-  configurePhase = ''
-    runHook preConfigure
-
-    echo "export ZOLTAN_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
-    echo "export SCOTCH_TYPE=system" >> $HOME/.OpenFOAM/prefs.sh
-
-    # echo "export ZOLTAN_TYPE=none" >> $HOME/.OpenFOAM/prefs.sh
-    # echo "export SCOTCH_TYPE=none" >> $HOME/.OpenFOAM/prefs.sh
-
-
-    runHook postConfigure
   '';
 
   buildPhase = ''
