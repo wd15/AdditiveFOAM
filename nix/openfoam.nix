@@ -2,14 +2,6 @@
 #   - https://github.com/NixOS/nixpkgs/blob/07ba4b68bad1931618851055077ed20d677b81ed/pkgs/by-name/op/openfoam-org/package.nix
 # Useful as well
 #   - https://git.computecanada.ca/nix/ccpkgs/-/blob/cc-20.09/pkgs/openfoam.nix
-# TODO:
-#   - use OpenFOAM-10 maybe
-#   - fix buildInputs versus nativeBuildInputs
-#   - remove .dev in inputs
-#   - remove argumnets that aren't required
-#   - stop setting LD LIBRARY and the like
-#   - remove configure phase as it isn't doing anything
-
 
 {
   stdenv,
@@ -26,11 +18,8 @@
   zlib,
   fetchFromGitHub,
   lib,
-  trilinos-mpi,
-  mpich,
   nix-update-script,
-  glibc,
-  libbsd,
+  trilinos-mpi
 }:
 stdenv.mkDerivation rec {
   pname = "openfoam-org";
@@ -67,8 +56,6 @@ stdenv.mkDerivation rec {
     flex
     scotch
     scotch.dev
-    # glibc
-    # libbsd
   ];
 
   propagatedBuildInputs = [
@@ -155,7 +142,7 @@ stdenv.mkDerivation rec {
     cd $HOME/OpenFOAM/OpenFOAM-12
     source ./etc/bashrc
 
-    export LD_LIBRARY_PATH="${flex}/lib:${libbsd}/lib''${LD_LIBRARY_PATH}"
+    export LD_LIBRARY_PATH="${flex}/lib''${LD_LIBRARY_PATH}"
     export C_INCLUDE_PATH="${flex}/include''${C_INCLUDE_PATH}"
     export CPLUS_INCLUDE_PATH="${flex}/include''${CPLUS_INCLUDE_PATH}"
 
