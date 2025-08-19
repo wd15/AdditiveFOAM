@@ -67,8 +67,8 @@ stdenv.mkDerivation rec {
     flex
     scotch
     scotch.dev
-    glibc
-    libbsd
+    # glibc
+    # libbsd
   ];
 
   propagatedBuildInputs = [

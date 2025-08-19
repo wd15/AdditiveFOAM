@@ -28,37 +28,65 @@
       openfoam = callPackage ./openfoam.nix { scotch = scotch; };
       scotch = callPackage ./scotch.nix { };      
 
-    };
+      additivefoam = with config; pkgs.stdenv.mkDerivation rec {
+        pname = "additivefoam";
+        version = "dev";
 
-    additivefoam = with config; pkgs.stdenv.mkDerivation rec {
-      pname = "additivefoam";
-      version = "dev";
+        sourceRoot = ".";
+        src = self;
 
-      src = self;
+        dontUseCmakeConfigure = true;
 
-      CMAKE_TLS_VERIFY=0;
+        buildInputs = [
+          derivations.openfoam
+          pkgs.openmpi
+        ];
+        
+        propagatedBuildInputs = [
+          pkgs.openmpi
+          derivations.openfoam
+        ];
+
+
+        buildPhase = ''
+          runHook preBuild
+
+          mkdir -p builduser/.OpenFOAM
+          mkdir -p builduser/OpenFOAM
+          export HOME=$(pwd)/builduser
+          export USER=builduser
+
+          source ${derivations.openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc || true
+
+          cd source/applications/solvers/additiveFoam/movingHeatSource
+          wmake libso
+
+          cd ..
+          wmake
+
+          runHook postBuild
+        '';
+
+        installPhase = ''
+        runHook preInstall
+
+        mkdir -p $out
+
+        cp -r $FOAM_USER_APPBIN $out
+        cp -r $FOAM_USER_LIBBIN $out
+
+        runHook postInstall
+        '';
+
       
-      nativeBuildInputs = [
-        pkgs.cmake
-        derivations.openfoam
-      ];
-
-      buildInputs = [
-        derivations.openfoam
-        pkgs.openmpi
-      ];
-
-      propagatedBuildInputs = [
-        pkgs.openmpi
-        derivations.openfoam
-      ];
+      };
 
     };
-      
+    
     packages = rec {
-      default = openfoam;
-
-      inherit (derivations) openfoam;
+      default = additivefoam;
+        
+      inherit (derivations) additivefoam openfoam;
     };
 
     devShells = with config; rec {
@@ -69,14 +97,21 @@
 
         packages = with pkgs; [
           derivations.openfoam
+          derivations.additivefoam
           cmake
-        ] ++ self.outputs.packages.${system}.default.buildInputs
-          ++ self.outputs.packages.${system}.default.nativeBuildInputs
-          ++ self.outputs.packages.${system}.default.propagatedBuildInputs;
-        
+          clang-tools
+        ] ++ pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isLinux) [
+          gdb
+          cntr
+        ] ++ derivations.openfoam.nativeBuildInputs
+          ++ derivations.openfoam.propagatedBuildInputs;
+
         shellHook = ''
           source ${derivations.openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc
+          export FOAM_USER_APPBIN=${derivations.additivefoam.outPath}/bin
+          export FOAM_USER_LIBBIN=${derivations.additivefoam.outPath}/lib
         '';
+
       };
 
     };
