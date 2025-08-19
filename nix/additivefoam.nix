@@ -45,4 +45,17 @@ stdenv.mkDerivation rec {
   runHook postInstall
   '';
 
+  doCheck = true;
+
+  checkPhase = ''
+
+    cd $HOME
+    mkdir -p app
+    cp -r ${src}/tutorials/AMB2018-02-B/* app/
+    chmod u+w -R app
+    cd app
+    ./Allrun
+
+  '';
+  
 }
