@@ -1,12 +1,13 @@
 ## See NIX.md for help getting started with Nix
 
 {
-  description = "An exascale-capable cellular automaton for nucleation and grain growth";
+  description = "An open-source CFD code for additive manufacturing built on OpenFOAM.";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
     # nixpkgs.url = "github:nixos/nixpkgs?ref=25.05;
     utils.url   = "github:numtide/flake-utils";
+    exaca.url   = "github:wd15/ExaCA?ref=nix";
   };
 
   outputs = inputs @ { self, utils, ... }: utils.lib.eachDefaultSystem (system: rec {
@@ -32,31 +33,32 @@
         src = self;
         version = self.shortRev or self.dirtyShortRev;
       };
+      exaca = inputs.exaca.packages.${system}.default;
     };
     
     packages = rec {
       default = additivefoam;
         
-      inherit (derivations) additivefoam openfoam;
+      inherit (derivations) additivefoam openfoam exaca;
     };
 
-    devShells = with config; rec {
+    devShells = with derivations; rec {
       default = additivefoamDev;
 
-      additivefoamDev = pkgs.mkShell rec {
+      additivefoamDev = config.pkgs.mkShell rec {
         name = "additivefoam-dev";
 
-        packages = with pkgs; [
-          derivations.openfoam
-          derivations.additivefoam
+        packages = with config.pkgs; [
+          openfoam
+          additivefoam
+          exaca
         ];
 
         shellHook = ''
-          source ${derivations.openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc
-          export FOAM_USER_APPBIN=${derivations.additivefoam.outPath}/bin
-          export FOAM_USER_LIBBIN=${derivations.additivefoam.outPath}/lib
+          source ${openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc
+          export FOAM_USER_APPBIN=${additivefoam.outPath}/bin
+          export FOAM_USER_LIBBIN=${additivefoam.outPath}/lib
         '';
-
       };
 
     };
