@@ -1,5 +1,6 @@
 {
   stdenv,
+  makeWrapper,
   openfoam,
   openmpi,
   exaca,
@@ -16,6 +17,7 @@ stdenv.mkDerivation rec {
   buildInputs = [
     openfoam
     openmpi
+    makeWrapper
   ];
 
   propagatedBuildInputs = [
@@ -61,6 +63,13 @@ stdenv.mkDerivation rec {
   runHook postInstall
   '';
 
+  postInstall = ''
+    ls $out/bin
+    wrapProgram $out/bin/additiveFoam \
+      --suffix LD_LIBRARY_PATH : "$out/lib"      
+  '';
+
+  
   doCheck = true;
 
   checkPhase = ''

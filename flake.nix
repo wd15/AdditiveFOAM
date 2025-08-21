@@ -60,65 +60,60 @@
     };
 
     devShells = with derivations; rec {
-      default = additivefoamEnv;
-      dev = additivefoamDev;
       
-      additivefoamEnv = (
-        let
-          default = self.outputs.packages.${system}.default;
-        in
-          config.pkgs.mkShell rec {
-            name = "additivefoam-env";
-            
-            packages = with config.pkgs; [
-              openfoam
-              default
-              exaca
-            ];
+      openfoam-env = config.pkgs.mkShell {
+        name = "openfoam-env";
+      
+        packages = [
+          openfoam
+        ];
 
-            shellHook = ''
-              source ${openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc
-              export ADDITIVE_FOAM_INST_DIR=${default.outPath}
-              export FOAM_USER_APPBIN=$ADDITIVE_FOAM_INST_DIR/bin
-              export FOAM_USER_LIBBIN=$ADDITIVE_FOAM_INST_DIR/lib
-              export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$FOAM_USER_LIBBIN
-            '';
-          }
-      );
+        shellHook = ''
+          source ${derivations.openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc
+        '';
+      };
 
-      additivefoamDev = (
-        let
-          default = self.outputs.packages.${system}.default;
-          pkgs = config.pkgs;
-        in
-          config.pkgs.mkShell rec {
-            name = "additivefoam-dev";
-            
-            packages = with config.pkgs; [
-              openfoam
-              exaca
-            ]  ++ pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isLinux) [
-              gdb
-              cntr
-            ] ++ default.buildInputs
-              ++ default.nativeBuildInputs
-              ++ default.propagatedBuildInputs;
+      default = openfoam-env.overrideAttrs (old: {
 
-            LOCALE_ARCHIVE = pkgs.lib.optional (pkgs.stdenv.hostPlatform.isLinux) (
-              "${pkgs.glibcLocales}/lib/locale/locale-archive"
-            );
-            shellHook = ''
-              source ${openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc
-            '';
-          }
-      );
+        name = "additivefoam-env";
 
+        nativeBuildInputs = [
+          additivefoam.devel
+          exaca
+        ] ++ old.nativeBuildInputs;
 
+      });
+
+      stable = openfoam-env.overrideAttrs (old: {
+
+        name = "additivefoam-stable-env";
+
+        nativeBuildInputs = [
+          additivefoam.stable
+          exaca
+        ] ++ old.nativeBuildInputs;
+
+      });
+      
+      devel = default.overrideAttrs (old: {
+        name = "additivefoam-dev";
+
+        nativeBuildInputs =
+          old.nativeBuildInputs ++
+          pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isLinus) [
+            gdb
+            cntr
+          ] ++ additivefoam.devel.buildInputs
+          ++ additivefoam.devel.default.nativeBuildInputs
+          ++ additivefoam.devel.propagatedBuildInputs;
+
+        LOCALE_ARCHIVE = pkgs.lib.optional (pkgs.stdenv.hostPlatform.isLinux) (
+          "${pkgs.glibcLocales}/lib/locale/locale-archive"
+        );
+
+      });
       
     };
 
-
-
-    
   });
 }
