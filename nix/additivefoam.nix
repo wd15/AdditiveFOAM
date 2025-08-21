@@ -1,6 +1,8 @@
 {
   stdenv,
   openfoam,
+  openmpi,
+  exaca,
   src,
   version
 }:
@@ -13,8 +15,14 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     openfoam
+    openmpi
   ];
-        
+
+  propagatedBuildInputs = [
+    exaca
+    openmpi
+  ];
+  
   buildPhase = ''
     runHook preBuild
 
@@ -25,10 +33,15 @@ stdenv.mkDerivation rec {
 
     source ${openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc || true
 
-    cd source/applications/solvers/additiveFoam/movingHeatSource
+    APPS_DIR=$(pwd)/source/applications/solvers/additiveFoam
+
+    cd $APPS_DIR/movingHeatSource
     wmake libso
 
-    cd ..
+    cd $APPS_DIR/functionObjects/ExaCA
+    wmake libso
+
+    cd $APPS_DIR
     wmake
 
     runHook postBuild
@@ -42,6 +55,9 @@ stdenv.mkDerivation rec {
   cp -r $FOAM_USER_APPBIN $out
   cp -r $FOAM_USER_LIBBIN $out
 
+  cp -r ${src}/applications $out/
+  cp -r ${src}/tutorials $out/
+
   runHook postInstall
   '';
 
@@ -54,7 +70,14 @@ stdenv.mkDerivation rec {
     cp -r ${src}/tutorials/AMB2018-02-B/* app/
     chmod u+w -R app
     cd app
-    ./Allrun
+
+    # broken in parallel?
+    substituteInPlace $HOME/app/Allrun --replace-fail "runParallel" "runApplication"
+    substituteInPlace $HOME/app/Allrun --replace-fail "~/install/exaca/bin/ExaCA" "ExaCA"
+
+    ./Allrun -withExaCA
+
+    test -e ExaCA/Output.vtk
 
   '';
   
