@@ -66,6 +66,7 @@
       
         packages = [
           openfoam
+          exaca
         ];
 
         shellHook = ''
@@ -74,23 +75,19 @@
       };
 
       default = openfoam-env.overrideAttrs (old: {
-
         name = "additivefoam-env";
 
         nativeBuildInputs = [
           additivefoam.devel
-          exaca
         ] ++ old.nativeBuildInputs;
 
       });
 
       stable = openfoam-env.overrideAttrs (old: {
-
         name = "additivefoam-stable-env";
 
         nativeBuildInputs = [
           additivefoam.stable
-          exaca
         ] ++ old.nativeBuildInputs;
 
       });
