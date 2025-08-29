@@ -6,7 +6,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
     utils.url   = "github:numtide/flake-utils";
-    exaca.url   = "github:wd15/ExaCA?ref=nix";
+    exaca.url   = "github:wd15/ExaCA/nix?dir=envs/nix";
   };
 
   outputs = inputs @ { self, utils, ... }: utils.lib.eachDefaultSystem (system: rec {
@@ -27,7 +27,7 @@
 
       openfoam = callPackage ./nix/openfoam.nix { scotch = scotch; };
       scotch = callPackage ./nix/scotch.nix { };
-      exaca = inputs.exaca.packages.${system}.stable;
+      exaca = inputs.exaca.packages.${system}.default;
 
       additivefoam =
         let

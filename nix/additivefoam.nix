@@ -88,6 +88,9 @@ stdenv.mkDerivation rec {
 
     test -e ExaCA/Output.vtk
 
+    cd ..
+    \rm -rf app
+
   '';
   
 }
