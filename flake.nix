@@ -5,112 +5,37 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
-    utils.url   = "github:numtide/flake-utils";
     exaca.url   = "github:wd15/ExaCA/nix?dir=envs/nix";
+    parts.url = "github:hercules-ci/flake-parts";
   };
 
-  outputs = inputs @ { self, utils, ... }: utils.lib.eachDefaultSystem (system: rec {
-    config = rec {
-      pkgs = import inputs.nixpkgs {
-        inherit system;        
-        config.cudaSupport = true;
-        config.allowUnfree = true;
-      };
-    };
+  outputs = inputs @ { self, parts, ... }: (
+    parts.lib.mkFlake { inherit inputs; } {
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
 
-    lib = with config; {
-      callPackage = set: pkgs.lib.callPackageWith (pkgs // set);
-    };
-
-    derivations = with config; rec {
-      callPackage = lib.callPackage {};
-
-      openfoam = callPackage ./nix/openfoam.nix { scotch = scotch; };
-      scotch = callPackage ./nix/scotch.nix { };
-      exaca = inputs.exaca.packages.${system}.default;
-
-      additivefoam =
-        let
-          args = { exaca = exaca; openfoam = openfoam; };
-        in
-          {
-            devel = callPackage ./nix/additivefoam.nix ({
-              src = self;
-              version = self.shortRev or self.dirtyShortRev;
-            } // args);
+      perSystem = { pkgs, inputs', ... }: {
+        packages = rec {
+          default = additivefoam;
             
-            stable = callPackage ./nix/additivefoam.nix (rec {
-              src = pkgs.fetchFromGitHub {
-                owner = "ORNL";
-                repo = "AdditiveFOAM";
-                rev = "${version}";
-                hash = "sha256-P7deK129ZiIvxYhP9AjxTX7PNDURF84jEcsIP1DRxPg=";
-              };
-              version = "1.1.0";
-            } // args);
+          openfoam = pkgs.callPackage ./nix/openfoam.nix { scotch = scotch; };
+          scotch = pkgs.callPackage ./nix/scotch.nix { };
+          exaca = inputs'.exaca.packages.default;
+
+          additivefoam = pkgs.callPackage ./nix/additivefoam.nix {
+            src = self;
+            version = "master";
+            exaca = exaca;
+            openfoam = openfoam;
           };
-      
-    };
-    
-    packages = rec {
-      default = additivefoam.devel;
-      stable = additivefoam.stable;
-        
-      inherit (derivations) additivefoam openfoam exaca;
-    };
+        };
 
-    devShells = with derivations; rec {
-      
-      openfoam-env = config.pkgs.mkShell {
-        name = "openfoam-env";
-      
-        packages = [
-          openfoam
-          exaca
+        imports = [
+          ./nix/dev.nix
         ];
-
-        shellHook = ''
-          source ${derivations.openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc
-        '';
       };
-
-      default = openfoam-env.overrideAttrs (old: {
-        name = "additivefoam-env";
-
-        nativeBuildInputs = [
-          additivefoam.devel
-        ] ++ old.nativeBuildInputs;
-
-      });
-
-      stable = openfoam-env.overrideAttrs (old: {
-        name = "additivefoam-stable-env";
-
-        nativeBuildInputs = [
-          additivefoam.stable
-        ] ++ old.nativeBuildInputs;
-
-      });
-      
-      devel = default.overrideAttrs (old: {
-        name = "additivefoam-dev";
-
-        nativeBuildInputs =
-          old.nativeBuildInputs ++
-          pkgs.lib.optionals (pkgs.stdenv.hostPlatform.isLinus) [
-            gdb
-            cntr
-          ] ++ additivefoam.devel.buildInputs
-          ++ additivefoam.devel.default.nativeBuildInputs
-          ++ additivefoam.devel.propagatedBuildInputs;
-
-        LOCALE_ARCHIVE = pkgs.lib.optional (pkgs.stdenv.hostPlatform.isLinux) (
-          "${pkgs.glibcLocales}/lib/locale/locale-archive"
-        );
-
-      });
-      
-    };
-
-  });
+    }
+  );
 }
