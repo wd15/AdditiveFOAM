@@ -125,6 +125,8 @@ stdenv.mkDerivation rec {
     cd $HOME/OpenFOAM/OpenFOAM-12
     source ./etc/bashrc
 
+    # Can't get it working without these paths.
+    # Shouldn't be required
     export LD_LIBRARY_PATH="${flex}/lib''${LD_LIBRARY_PATH}"
     export C_INCLUDE_PATH="${flex}/include''${C_INCLUDE_PATH}"
     export CPLUS_INCLUDE_PATH="${flex}/include''${CPLUS_INCLUDE_PATH}"
