@@ -5,7 +5,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
-    exaca.url   = "github:wd15/ExaCA/nix?dir=envs/nix";
+    exaca.url   = "github:LLNL/ExaCA?dir=envs/nix";
     parts.url = "github:hercules-ci/flake-parts";
   };
 
