@@ -7,17 +7,16 @@
       },
       "locked": {
         "dir": "envs/nix",
-        "lastModified": 1756486888,
-        "narHash": "sha256-G41OUQsMrI6JVGMiykzX5QOx+ur9vArneUKmQKtNTeE=",
-        "owner": "wd15",
+        "lastModified": 1757080339,
+        "narHash": "sha256-OwphXRWa4v11R81l1gABhzEaeBWtTyi5u6R1Uf1oMhA=",
+        "owner": "LLNL",
         "repo": "ExaCA",
-        "rev": "fbc811e72caa55d6e9202fdbb1c84dcdeee12fbe",
+        "rev": "562eedc4db2306572ad6dedf6f9e69ea6ecca722",
         "type": "github"
       },
       "original": {
         "dir": "envs/nix",
-        "owner": "wd15",
-        "ref": "nix",
+        "owner": "LLNL",
         "repo": "ExaCA",
         "type": "github"
       }

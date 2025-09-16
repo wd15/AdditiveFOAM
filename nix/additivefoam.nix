@@ -83,6 +83,7 @@ stdenv.mkDerivation rec {
     # broken in parallel?
     substituteInPlace $HOME/app/Allrun --replace-fail "runParallel" "runApplication"
     substituteInPlace $HOME/app/Allrun --replace-fail "~/install/exaca/bin/ExaCA" "ExaCA"
+    substituteInPlace $HOME/app/Allrun --replace-fail "mpirun -np \$NPROCS" "mpirun -np 1"
 
     ./Allrun -withExaCA
 
