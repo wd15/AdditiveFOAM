@@ -12,11 +12,10 @@
       ];
 
       shellHook = ''
-        source ${openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc\
+        source ${openfoam.BASHRC}
       '';                    
       
     };
-
 
     devel = pkgs.mkShell {
       name = "additivefoam-dev";
@@ -31,7 +30,7 @@
       ];
 
       shellHook = ''
-        source ${openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc\
+        source ${openfoam.BASHRC}
       '';      
 
       LOCALE_ARCHIVE = pkgs.lib.optional (pkgs.stdenv.hostPlatform.isLinux) (

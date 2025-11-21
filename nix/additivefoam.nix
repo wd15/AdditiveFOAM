@@ -7,7 +7,6 @@
   src,
   version,
   glibc,
-  trilinos-mpi,
   zlib
 }:
 stdenv.mkDerivation rec {
@@ -24,7 +23,6 @@ stdenv.mkDerivation rec {
   buildInputs = [
     openfoam
     openmpi
-    trilinos-mpi
     zlib
   ];
 
@@ -41,7 +39,7 @@ stdenv.mkDerivation rec {
     export HOME=$(pwd)/builduser
     export USER=builduser
 
-    source ${openfoam.outPath}/opt/OpenFOAM-12/etc/bashrc || true
+    source ${openfoam.BASHRC} || true
 
     APPS_DIR=$(pwd)/source/applications/solvers/additiveFoam
 
