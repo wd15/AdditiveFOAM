@@ -44,7 +44,6 @@ stdenv.mkDerivation rec {
     APPS_DIR=$(pwd)/source/applications/solvers/additiveFoam
 
     cd $APPS_DIR/movingHeatSource
-
     wmake libso
 
     cd $APPS_DIR/functionObjects/ExaCA
